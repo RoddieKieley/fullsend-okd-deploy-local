@@ -1,0 +1,82 @@
+# Multi-project registry and dispatcher scan state.
+#
+# Adding a project = add an entry to projects.json and ensure the App is
+# installed on the repo. Keys are short ids (no '/') used in Job labels
+# (fullsend/repo=<key>), Job names and log lines.
+#
+# The dispatcher reads this ConfigMap each run (see dispatcher/dispatch.sh).
+# deadline_seconds is capped at 3300 in code: an installation token lives one
+# hour and is minted when the Job starts, so the push must happen inside it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fullsend-projects
+  namespace: fullsend
+data:
+  # Per-model concurrency, keyed by the model id used in projects.json. Every
+  # model referenced by an enabled project must appear here; a scan fails
+  # otherwise. Counted across stages: a model shared by triage and code is one
+  # pool. Jobs are labelled fullsend/model=<slug> for the count.
+  models.json: |
+    {
+      "gateway/qwen38":                { "max_concurrent": 1, "locality": "local" },
+      "ollama/Qwen3.8-27B":            { "max_concurrent": 1, "locality": "local" },
+      "gateway/enmaas-glm-5-3":        { "max_concurrent": 2, "locality": "remote" },
+      "gateway/enmaas-deepseek-v4-1":  { "max_concurrent": 2, "locality": "remote" }
+    }
+  projects.json: |
+    [
+      {
+        "key": "fs0",
+        "repo": "RoddieKieley/fs-scratch-0",
+        "installation_id": "REPLACE_WITH_INSTALLATION_ID",
+        "enabled": true,
+        "privacy": "local",
+        "poll_seconds": 120,
+        "deadline_seconds": 3300,
+        "max_code": 2,
+        "max_triage": 2,
+        "triage_max_age_days": 30,
+        "model_code": "gateway/qwen38",
+        "model_triage": "ollama/Qwen3.8-27B"
+      },
+      {
+        "key": "fs1",
+        "repo": "RoddieKieley/fs-scratch-1",
+        "installation_id": "REPLACE_WITH_INSTALLATION_ID",
+        "enabled": true,
+        "privacy": "any",
+        "poll_seconds": 300,
+        "deadline_seconds": 3300,
+        "max_code": 1,
+        "max_triage": 1,
+        "triage_max_age_days": 14,
+        "model_code": "gateway/enmaas-deepseek-v4-1",
+        "model_triage": "ollama/Qwen3.8-27B"
+      },
+      {
+        "key": "js",
+        "repo": "RoddieKieley/jumpstarter",
+        "installation_id": "REPLACE_WITH_INSTALLATION_ID",
+        "enabled": true,
+        "privacy": "any",
+        "poll_seconds": 300,
+        "deadline_seconds": 3300,
+        "max_code": 1,
+        "max_triage": 1,
+        "triage_max_age_days": 30,
+        "model_code": "gateway/enmaas-deepseek-v4-1",
+        "model_triage": "ollama/Qwen3.8-27B"
+      }
+    ]
+---
+# data.<key> = unix epoch of the last completed scan for that project.
+# The dispatcher patches only its own key; epoch 0 means "due immediately".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fullsend-dispatch-state
+  namespace: fullsend
+data:
+  fs0: "0"
+  fs1: "0"

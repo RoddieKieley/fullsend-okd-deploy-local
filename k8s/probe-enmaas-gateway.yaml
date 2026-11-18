@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: probe-enmaas-gateway
+  namespace: fullsend
+  labels:
+    app: fullsend-probe
+    fullsend/repo: probe
+    fullsend/model: gateway-enmaas-glm-5-3
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 1800
+  template:
+    metadata:
+      labels:
+        app: fullsend-probe
+        fullsend/repo: probe
+        fullsend/model: gateway-enmaas-glm-5-3
+    spec:
+      restartPolicy: Never
+      serviceAccountName: fullsend-runner
+      containers:
+        - name: agent
+          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          imagePullPolicy: Always
+          command: ["/bin/bash", "/scripts/run-agent.sh"]
+          env:
+            - { name: FULLSEND_FORGE,       value: "github" }
+            - { name: FULLSEND_ISSUE_URL,   value: "https://github.com/RoddieKieley/fs-scratch-0/issues/11" }
+            - { name: FULLSEND_REPO_SLUG,   value: "RoddieKieley/fs-scratch-0" }
+            - { name: FULLSEND_REPO_KEY,    value: "probe" }
+            - { name: FULLSEND_AGENT,       value: "code" }
+            - { name: FULLSEND_RUNTIME,     value: "pi" }
+            - { name: FULLSEND_MODEL,       value: "gateway/enmaas-glm-5-3" }
+            - { name: FULLSEND_RUN_POST,    value: "0" }
+            - name: GITHUB_APP_ID
+              valueFrom: { secretKeyRef: { name: fullsend-github-app, key: app-id } }
+            - name: GITHUB_APP_INSTALLATION_ID
+              valueFrom: { secretKeyRef: { name: fullsend-github-app, key: installation-id } }
+            - name: OPENSHELL_GATEWAY_URL
+              value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: fullsend-runner-keycloak, key: client-secret } }
+            - name: FULLSEND_INFERENCE_GATEWAY_API_KEY
+              valueFrom: { secretKeyRef: { name: litellm-inference-key, key: api-key } }
+          resources:
+            requests: { cpu: "500m", memory: "1Gi" }
+            limits: { cpu: "2", memory: "3Gi" }
+          volumeMounts:
+            - { name: scripts,    mountPath: /scripts, readOnly: true }
+            - { name: gateway-ca, mountPath: /etc/openshell-ca, readOnly: true }
+            - { name: github-app, mountPath: /var/run/secrets/github-app, readOnly: true }
+      volumes:
+        - name: scripts
+          configMap: { name: fullsend-runner-scripts, defaultMode: 365 }
+        - name: gateway-ca
+          configMap: { name: fullsend-gateway-ca, items: [{ key: ca.crt, path: ca.crt }] }
+        - name: github-app
+          secret: { secretName: fullsend-github-app, items: [{ key: private-key, path: private-key }] }

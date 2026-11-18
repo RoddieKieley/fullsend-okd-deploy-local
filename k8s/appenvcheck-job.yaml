@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: appenvcheck
+  namespace: fullsend
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: fullsend-runner
+      containers:
+        - name: check
+          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          imagePullPolicy: Always
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              echo "openssl: $(openssl version)"
+              T=$(bash /scripts/mint-app-token.sh "$GITHUB_APP_ID" "$GITHUB_APP_INSTALLATION_ID" /var/run/secrets/github-app/private-key)
+              echo "token_len=${#T}"
+              curl -sS -X POST https://api.github.com/graphql \
+                -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+                -d '{"query":"{viewer{login databaseId}}"}' \
+                | jq -r '"identity=" + .data.viewer.login + " id=" + (.data.viewer.databaseId|tostring)'
+              echo "run-agent identity block present:"
+              grep -c 'GIT_BOT_EMAIL=' /scripts/run-agent.sh
+          env:
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: fullsend-github-app
+                  key: app-id
+            - name: GITHUB_APP_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: fullsend-github-app
+                  key: installation-id
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: github-app
+              mountPath: /var/run/secrets/github-app
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: fullsend-runner-scripts
+        - name: github-app
+          secret:
+            secretName: fullsend-github-app
+            items:
+              - key: private-key
+                path: private-key

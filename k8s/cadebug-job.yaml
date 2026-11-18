@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cadebug
+  namespace: fullsend
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app: fullsend-cadebug
+    spec:
+      restartPolicy: Never
+      serviceAccountName: fullsend-runner
+      containers:
+        - name: c
+          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          imagePullPolicy: Always
+          command: ["/bin/bash", "/scripts/debug-ca.sh"]
+          env:
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fullsend-runner-keycloak
+                  key: client-secret
+            - name: OPENSHELL_GATEWAY_URL
+              value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+            - name: SSL_CERT_FILE
+              value: /etc/openshell-ca/ca.crt
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 1, memory: 1Gi }
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: gateway-ca
+              mountPath: /etc/openshell-ca
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: fullsend-runner-scripts
+            defaultMode: 0555
+        - name: gateway-ca
+          configMap:
+            name: fullsend-gateway-ca
+            items:
+              - key: ca.crt
+                path: ca.crt

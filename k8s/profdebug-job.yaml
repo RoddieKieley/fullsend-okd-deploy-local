@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: profdebug
+  namespace: fullsend
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app: fullsend-profdebug
+    spec:
+      restartPolicy: Never
+      serviceAccountName: fullsend-runner
+      containers:
+        - name: c
+          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          imagePullPolicy: Always
+          command: ["/bin/bash", "/scripts/debug-profile.sh"]
+          env:
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fullsend-runner-keycloak
+                  key: client-secret
+            - name: OPENSHELL_GATEWAY_URL
+              value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+            - name: OPENSHELL_GATEWAY_INSECURE
+              value: "true"
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 1, memory: 1Gi }
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: fullsend-runner-scripts
+            defaultMode: 0555

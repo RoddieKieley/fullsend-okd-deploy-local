@@ -1,0 +1,11 @@
+FROM ghcr.io/fullsend-ai/fullsend-code@sha256:8c5953b8bf88d681a66e2435cde5397bcac704f06fca5dc782f2206bcce91718
+
+USER 0
+# /sandbox/.cache/gopls is 0700 upstream, which breaks workspace seeding under
+# the OpenShell driver's arbitrary UID. The build caches (go-build 386M, uv
+# 106M) also dominate the seed and push it past the sandbox-ready timeout on a
+# single node; they are safe to drop because they are pure caches.
+RUN chmod -R a+rX /sandbox \
+ && rm -rf /sandbox/.cache/gopls /sandbox/.cache/go-build /sandbox/go/pkg/mod /sandbox/.uv \
+ && mkdir -p /sandbox/.cache
+USER 998

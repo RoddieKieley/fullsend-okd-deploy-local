@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: smoke
+  namespace: fullsend
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        app: fullsend-smoke
+    spec:
+      restartPolicy: Never
+      serviceAccountName: fullsend-runner
+      containers:
+        - name: smoke
+          # Internal registry reference; the stock runner image is the base,
+          # with fullsend (this checkout) and openshell 0.1.6-rhaiv.4 injected.
+          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          imagePullPolicy: Always
+          command: ["/bin/bash", "/scripts/smoke.sh"]
+          env:
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fullsend-runner-keycloak
+                  key: client-secret
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: fullsend-runner-scripts
+            defaultMode: 0555

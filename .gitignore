@@ -1,0 +1,16 @@
+# Build artifacts and vendored inputs: reproduced by rebuild-runner.sh from the
+# agents worktree and the built fullsend binary. Never commit them.
+image/fullsend
+image/openshell
+image/agents-okd/
+
+# Never commit credentials or local environment files.
+**/vertex-credentials.json
+**/*.pem
+**/*.key
+**/*.env
+**/hosts.yml
+**/ghconfig/
+
+# Scratch output.
+/tmp/

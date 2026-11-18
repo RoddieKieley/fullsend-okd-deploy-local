@@ -1,0 +1,43 @@
+{
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama (local)",
+      "options": {
+        "baseURL": "http://<model-host>:8080",
+        "timeout": 7200000
+      },
+      "models": {
+        "Qwen3.8-27B": {
+          "name": "Qwen3.8-27B",
+          "limit": {
+            "context": 262144,
+            "output": 262144
+          }
+        }
+      }
+    }
+  },
+  "permission": {
+    "*": "deny",
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "skill": "allow",
+    "bash": {
+      "*": "allow",
+      "rm *": "deny",
+      "git push*": "deny"
+    },
+    "external_directory": {
+      "*": "deny",
+      "/sandbox/workspace/output": "allow",
+      "/sandbox/workspace/output/**": "allow"
+    },
+    "write": "deny",
+    "edit": "deny",
+    "webfetch": "deny",
+    "task": "deny"
+  }
+}

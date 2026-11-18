@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dispatcher-dryrun
+  namespace: fullsend
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app: fullsend-dispatcher
+    spec:
+      restartPolicy: Never
+      serviceAccountName: fullsend-runner
+      containers:
+        - name: dispatch
+          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          imagePullPolicy: Always
+          command: ["/bin/bash", "/scripts/dispatch.sh"]
+          env:
+            - name: GH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fullsend-github
+                  key: token
+            - name: FULLSEND_REPO
+              value: "roddiekieley/fs-scratch-0"
+            - name: OPENSHELL_GATEWAY_URL
+              value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+            - name: FULLSEND_CODE_IMAGE
+              value: "image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev"
+            - name: DRY_RUN
+              value: "1"
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 1, memory: 1Gi }
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: fullsend-dispatcher
+            defaultMode: 0555

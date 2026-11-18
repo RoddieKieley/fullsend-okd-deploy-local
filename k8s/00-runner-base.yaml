@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fullsend-runner
+  namespace: fullsend
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fullsend-runner-scripts
+  namespace: fullsend
+# Generated from .opencode/okd-deploy/scripts; applied with
+#   oc -n fullsend create configmap fullsend-runner-scripts \
+#     --from-file=openshell-auth.sh=... --from-file=smoke.sh=...
+# (this manifest documents the expected shape)

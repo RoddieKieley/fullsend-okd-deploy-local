@@ -1,0 +1,185 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fullsend-runner
+  namespace: fullsend
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fullsend-dispatcher
+  namespace: fullsend
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # Registry read + scan-state patch (multi-project dispatcher).
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["fullsend-projects", "fullsend-dispatch-state"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["fullsend-dispatch-state"]
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fullsend-dispatcher
+  namespace: fullsend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fullsend-dispatcher
+subjects:
+  - kind: ServiceAccount
+    name: fullsend-runner
+    namespace: fullsend
+---
+# Reconcile: cheap and frequent. Lists issues carrying fullsend/<stage>-running,
+# compares Job state, flips to -succeeded/-failed. No discovery, no state, no
+# per-project gate — so a project's poll interval never delays stage labels.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: fullsend-reconcile
+  namespace: fullsend
+spec:
+  schedule: "*/2 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 120
+      template:
+        metadata:
+          labels:
+            app: fullsend-dispatcher
+            fullsend/role: reconcile
+        spec:
+          restartPolicy: Never
+          serviceAccountName: fullsend-runner
+          containers:
+            - name: dispatch
+              image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+              imagePullPolicy: Always
+              command: ["/bin/bash", "/scripts/dispatch.sh", "reconcile"]
+              env:
+                - name: GITHUB_APP_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: fullsend-github-app
+                      key: app-id
+                - name: GITHUB_APP_INSTALLATION_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: fullsend-github-app
+                      key: installation-id
+                - name: OPENSHELL_GATEWAY_URL
+                  value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+                - name: FULLSEND_CODE_IMAGE
+                  value: "image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev"
+                - name: DRY_RUN
+                  value: "0"
+              resources:
+                requests: { cpu: 100m, memory: 256Mi }
+                limits: { cpu: 1, memory: 1Gi }
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: github-app
+                  mountPath: /var/run/secrets/github-app
+                  readOnly: true
+          volumes:
+            - name: scripts
+              configMap:
+                name: fullsend-dispatcher
+                defaultMode: 0555
+            - name: github-app
+              secret:
+                secretName: fullsend-github-app
+                items:
+                  - key: private-key
+                    path: private-key
+---
+# Scan: discovery for every project whose poll_seconds has elapsed. The state
+# ConfigMap holds the last completed scan per project, so this tick rate is the
+# ceiling on detection latency, not the cadence each project actually gets.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: fullsend-scan
+  namespace: fullsend
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 300
+      template:
+        metadata:
+          labels:
+            app: fullsend-dispatcher
+            fullsend/role: scan
+        spec:
+          restartPolicy: Never
+          serviceAccountName: fullsend-runner
+          containers:
+            - name: dispatch
+              image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+              imagePullPolicy: Always
+              command: ["/bin/bash", "/scripts/dispatch.sh", "scan"]
+              env:
+                - name: GITHUB_APP_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: fullsend-github-app
+                      key: app-id
+                - name: GITHUB_APP_INSTALLATION_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: fullsend-github-app
+                      key: installation-id
+                - name: OPENSHELL_GATEWAY_URL
+                  value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+                - name: FULLSEND_CODE_IMAGE
+                  value: "image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev"
+                - name: FULLSEND_MAX_CONCURRENT_TRIAGE
+                  value: "4"
+                - name: FULLSEND_MAX_CONCURRENT_CODE
+                  value: "4"
+                - name: DRY_RUN
+                  value: "0"
+              resources:
+                requests: { cpu: 100m, memory: 256Mi }
+                limits: { cpu: 1, memory: 1Gi }
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: github-app
+                  mountPath: /var/run/secrets/github-app
+                  readOnly: true
+          volumes:
+            - name: scripts
+              configMap:
+                name: fullsend-dispatcher
+                defaultMode: 0555
+            - name: github-app
+              secret:
+                secretName: fullsend-github-app
+                items:
+                  - key: private-key
+                    path: private-key

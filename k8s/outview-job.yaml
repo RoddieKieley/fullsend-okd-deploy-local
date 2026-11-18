@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: outview
+  namespace: fullsend
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: fullsend-runner
+      containers:
+        - name: c
+          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          imagePullPolicy: Always
+          command: ["/bin/bash","-c"]
+          args:
+            - |
+              for d in $(ls -dt /out/fs-tri-*/ 2>/dev/null | head -8); do
+                f="$d/iteration-1/output/agent-result.json"
+                [[ -f "$f" ]] || continue
+                echo "=== $d $(stat -c %y "$f" 2>/dev/null)"
+                jq -r '"action=\(.action) category=\(.triage_summary.category // "-") promote=\(.triage_summary.promote_to_ready_to_code // "-")"' "$f" 2>/dev/null
+              done
+          volumeMounts:
+            - name: out
+              mountPath: /out
+      volumes:
+        - name: out
+          persistentVolumeClaim:
+            claimName: fullsend-output

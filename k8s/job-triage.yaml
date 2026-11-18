@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fullsend-triage
+  namespace: fullsend
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 4500
+  template:
+    metadata:
+      labels:
+        app: fullsend-agent
+    spec:
+      restartPolicy: Never
+      serviceAccountName: fullsend-runner
+      containers:
+        - name: agent
+          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          imagePullPolicy: Always
+          command: ["/bin/bash", "/scripts/run-agent.sh"]
+          env:
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fullsend-runner-keycloak
+                  key: client-secret
+            # Talk to the gateway Service directly, not the public route:
+            # the route fronts Envoy, which resets long-idle gRPC streams.
+            - name: OPENSHELL_GATEWAY_URL
+              value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+            # --- forge selection ---
+            - name: FULLSEND_FORGE
+              value: "github"
+            - name: GH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fullsend-github
+                  key: token
+            - name: FULLSEND_ISSUE_URL
+              value: "https://github.com/roddiekieley/fs-scratch-0/issues/1"
+            - name: FULLSEND_REPO_SLUG
+              value: "roddiekieley/fs-scratch-0"
+            - name: FULLSEND_AGENT
+              value: "code"
+            - name: FULLSEND_RUNTIME
+              value: "pi"
+            - name: FULLSEND_MODEL
+              value: "gateway/qwen38"
+            - name: FULLSEND_INFERENCE_GATEWAY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-inference-key
+                  key: api-key
+            - name: GIT_BOT_EMAIL
+              value: "fullsend-code@users.noreply.github.com"
+            - name: FULLSEND_RUN_POST
+              value: "1"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: gateway-ca
+              mountPath: /etc/openshell-ca
+              readOnly: true
+            - name: output
+              mountPath: /work/output
+      volumes:
+        - name: scripts
+          configMap:
+            name: fullsend-runner-scripts
+            defaultMode: 0555
+        - name: gateway-ca
+          configMap:
+            name: fullsend-gateway-ca
+            items:
+              - key: ca.crt
+                path: ca.crt
+        - name: output
+          persistentVolumeClaim:
+            claimName: fullsend-output

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: outview
+  namespace: fullsend
+spec:
+  restartPolicy: Never
+  containers:
+    - name: c
+      image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+      command: ["/bin/bash","-c"]
+      args:
+        - |
+          set -u
+          R=/out/fs-tri-9cb6ea94bff8
+          echo "== files =="
+          find "$R" -maxdepth 4 -type f | sort
+          echo
+          echo "== agent-result.json =="
+          cat "$R/iteration-1/output/agent-result.json" 2>&1
+          echo
+          echo "== metrics.json =="
+          cat "$R/metrics.json" 2>&1
+      volumeMounts:
+        - name: out
+          mountPath: /out
+  volumes:
+    - name: out
+      persistentVolumeClaim:
+        claimName: fullsend-output
