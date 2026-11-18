@@ -237,6 +237,39 @@ is no dependency ordering between children, no rollup that closes the parent
 after children land (a split parent is already closed at split time), and all
 children inherit the project's model mapping and caps.
 
+## Portability
+
+Cluster-specific values are not baked into the scripts. They live in two files
+with a fixed precedence:
+
+| Precedence | File | Committed |
+|---|---|---|
+| 1 (wins) | process environment | — |
+| 2 | `values.local.env` | no (git-ignored) |
+| 3 | `values.example.env` | yes, placeholders |
+
+```sh
+cp values.example.env values.local.env && chmod 600 values.local.env
+$EDITOR values.local.env        # CLUSTER_DOMAIN, OPENSHELL_NAMESPACE, KEYCLOAK_*, models, App ids
+```
+
+- `scripts/lib/values.sh` loads them, derives the common values (Keycloak URLs,
+  registry, gateway service URL, image refs) and exports everything.
+- Manifests that need values are templates: `k8s/*.tmpl`. `host/render-manifests.sh`
+  writes `k8s/rendered/*.yaml` (git-ignored) and the deploy scripts apply those.
+- Host-side deployment lives in `host/`: `deploy-litellm.sh`,
+  `build-runner-image.sh`, `push-runner-image.sh`, `rebuild-runner.sh`,
+  `litellm-route.sh`, `render-manifests.sh`.
+- In-cluster scripts (`scripts/openshell-auth.sh`, `smoke.sh`, `run-agent.sh`)
+  take every cluster reference from the environment; the dispatcher passes them
+  into each Job from the rendered CronJob.
+- EnMaaS is optional: the model entries are emitted only when `ENMAAS_API_BASE`
+  and both model ids are set, and its Secret reference is `optional: true`.
+
+Still local for now: `k8s/projects-config.yaml` (repos, installation id, model
+choices), the one-off diagnostic manifests, and the harness `config.yaml` +
+local-llm profile on the agents fork.
+
 ## Verified
 
 | Check | Result |

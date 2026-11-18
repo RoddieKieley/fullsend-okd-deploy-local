@@ -2,13 +2,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fullsend-runner
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: fullsend-dispatcher
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 rules:
   - apiGroups: ["batch"]
     resources: ["jobs"]
@@ -30,7 +30,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: fullsend-dispatcher
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -38,7 +38,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: fullsend-runner
-    namespace: fullsend
+    namespace: ${NAMESPACE}
 ---
 # Reconcile: cheap and frequent. Lists issues carrying fullsend/<stage>-running,
 # compares Job state, flips to -succeeded/-failed. No discovery, no state, no
@@ -47,7 +47,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: fullsend-reconcile
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 spec:
   schedule: "*/2 * * * *"
   concurrencyPolicy: Forbid
@@ -68,24 +68,34 @@ spec:
           serviceAccountName: fullsend-runner
           containers:
             - name: dispatch
-              image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+              image: ${RUNNER_IMAGE}
               imagePullPolicy: Always
               command: ["/bin/bash", "/scripts/dispatch.sh", "reconcile"]
               env:
                 - name: GITHUB_APP_ID
                   valueFrom:
                     secretKeyRef:
-                      name: fullsend-github-app
+                      name: ${GITHUB_APP_SECRET_NAME}
                       key: app-id
                 - name: GITHUB_APP_INSTALLATION_ID
                   valueFrom:
                     secretKeyRef:
-                      name: fullsend-github-app
+                      name: ${GITHUB_APP_SECRET_NAME}
                       key: installation-id
                 - name: OPENSHELL_GATEWAY_URL
-                  value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+                  value: "${OPENSHELL_GATEWAY_URL}"
+                - name: RUNNER_IMAGE
+                  value: "${RUNNER_IMAGE}"
+                - name: KEYCLOAK_HOST
+                  value: "${KEYCLOAK_HOST}"
+                - name: KEYCLOAK_REALM
+                  value: "${KEYCLOAK_REALM}"
+                - name: OPENSHELL_OIDC_CLIENT_ID
+                  value: "${OPENSHELL_OIDC_CLIENT_ID}"
+                - name: OPENSHELL_OIDC_ISSUER
+                  value: "${OPENSHELL_OIDC_ISSUER}"
                 - name: FULLSEND_CODE_IMAGE
-                  value: "image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev"
+                  value: "${RUNNER_IMAGE}"
                 - name: DRY_RUN
                   value: "0"
               resources:
@@ -117,7 +127,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: fullsend-scan
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 spec:
   schedule: "*/5 * * * *"
   concurrencyPolicy: Forbid
@@ -138,28 +148,38 @@ spec:
           serviceAccountName: fullsend-runner
           containers:
             - name: dispatch
-              image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+              image: ${RUNNER_IMAGE}
               imagePullPolicy: Always
               command: ["/bin/bash", "/scripts/dispatch.sh", "scan"]
               env:
                 - name: GITHUB_APP_ID
                   valueFrom:
                     secretKeyRef:
-                      name: fullsend-github-app
+                      name: ${GITHUB_APP_SECRET_NAME}
                       key: app-id
                 - name: GITHUB_APP_INSTALLATION_ID
                   valueFrom:
                     secretKeyRef:
-                      name: fullsend-github-app
+                      name: ${GITHUB_APP_SECRET_NAME}
                       key: installation-id
                 - name: OPENSHELL_GATEWAY_URL
-                  value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+                  value: "${OPENSHELL_GATEWAY_URL}"
+                - name: RUNNER_IMAGE
+                  value: "${RUNNER_IMAGE}"
+                - name: KEYCLOAK_HOST
+                  value: "${KEYCLOAK_HOST}"
+                - name: KEYCLOAK_REALM
+                  value: "${KEYCLOAK_REALM}"
+                - name: OPENSHELL_OIDC_CLIENT_ID
+                  value: "${OPENSHELL_OIDC_CLIENT_ID}"
+                - name: OPENSHELL_OIDC_ISSUER
+                  value: "${OPENSHELL_OIDC_ISSUER}"
                 - name: FULLSEND_CODE_IMAGE
-                  value: "image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev"
+                  value: "${RUNNER_IMAGE}"
                 - name: FULLSEND_MAX_CONCURRENT_TRIAGE
-                  value: "4"
+                  value: "${FULLSEND_MAX_CONCURRENT_TRIAGE}"
                 - name: FULLSEND_MAX_CONCURRENT_CODE
-                  value: "4"
+                  value: "${FULLSEND_MAX_CONCURRENT_CODE}"
                 - name: DRY_RUN
                   value: "0"
               resources:

@@ -14,25 +14,31 @@
 #   OPENSHELL_GATEWAY_NAME   default: okd
 set -euo pipefail
 
-KEYCLOAK_TOKEN_URL="${KEYCLOAK_TOKEN_URL:-https://keycloak-hypershell-keycloak.apps.<cluster-domain>/realms/hypershell/protocol/openid-connect/token}"
+# Configuration comes from the environment; the dispatcher passes it from the
+# deployment values (values.local.env rendered into the CronJob). Nothing
+# cluster-specific is baked into this file.
 OPENSHELL_GATEWAY_NAME="${OPENSHELL_GATEWAY_NAME:-okd}"
-# The gateway is recreated with a new ID/hostname by the hypershell controller;
-# `gw-discover.sh` rewrites the metadata below. Prefer that over a hardcoded
-# default so a rotation only needs one discovery run. In-cluster callers set
-# OPENSHELL_GATEWAY_URL to the Service endpoint and override this anyway.
-if [[ -z "${OPENSHELL_GATEWAY_URL:-}" ]]; then
-  _meta="$HOME/.config/openshell/gateways/$OPENSHELL_GATEWAY_NAME/metadata.json"
-  if [[ -f "$_meta" ]]; then
-    OPENSHELL_GATEWAY_URL=$(jq -r '.gateway_endpoint // empty' "$_meta" 2>/dev/null)
-  fi
+KEYCLOAK_REALM="${KEYCLOAK_REALM:-hypershell}"
+KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID:-fullsend-runner}"
+
+_meta="$HOME/.config/openshell/gateways/$OPENSHELL_GATEWAY_NAME/metadata.json"
+if [[ -z "${OPENSHELL_GATEWAY_URL:-}" && -f "$_meta" ]]; then
+  OPENSHELL_GATEWAY_URL=$(jq -r '.gateway_endpoint // empty' "$_meta" 2>/dev/null)
 fi
-OPENSHELL_GATEWAY_URL="${OPENSHELL_GATEWAY_URL:-https://gw-<openshell-namespace>.gw.<cluster-domain>}"
-OPENSHELL_OIDC_ISSUER="${OPENSHELL_OIDC_ISSUER:-https://keycloak-hypershell-keycloak.apps.<cluster-domain>/realms/hypershell}"
-if [[ -z "${OPENSHELL_OIDC_CLIENT_ID:-}" && -f "${_meta:-}" ]]; then
+if [[ -z "${OPENSHELL_OIDC_CLIENT_ID:-}" && -f "$_meta" ]]; then
   OPENSHELL_OIDC_CLIENT_ID=$(jq -r '.oidc_client_id // empty' "$_meta" 2>/dev/null)
 fi
-OPENSHELL_OIDC_CLIENT_ID="${OPENSHELL_OIDC_CLIENT_ID:-3LvCTLg6l3GG1XNl1Z3N5ZWXNKe}"
-KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID:-fullsend-runner}"
+if [[ -z "${KEYCLOAK_TOKEN_URL:-}" && -n "${KEYCLOAK_HOST:-}" ]]; then
+  KEYCLOAK_TOKEN_URL="https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token"
+fi
+if [[ -z "${OPENSHELL_OIDC_ISSUER:-}" && -n "${KEYCLOAK_HOST:-}" ]]; then
+  OPENSHELL_OIDC_ISSUER="https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM}"
+fi
+
+: "${KEYCLOAK_TOKEN_URL:?KEYCLOAK_TOKEN_URL or KEYCLOAK_HOST must be set}"
+: "${OPENSHELL_GATEWAY_URL:?OPENSHELL_GATEWAY_URL must be set (or run host/discover-gateway.sh)}"
+: "${OPENSHELL_OIDC_ISSUER:?OPENSHELL_OIDC_ISSUER or KEYCLOAK_HOST must be set}"
+: "${OPENSHELL_OIDC_CLIENT_ID:?OPENSHELL_OIDC_CLIENT_ID must be set}"
 
 a2en_gateway_dir() {
   mkdir -p "$HOME/.config/openshell/gateways/$OPENSHELL_GATEWAY_NAME"

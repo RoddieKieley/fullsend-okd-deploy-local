@@ -46,7 +46,8 @@ API="${GITHUB_API_URL:-https://api.github.com}"
 NS="${FULLSEND_NAMESPACE:-fullsend}"
 DRY_RUN="${DRY_RUN:-0}"
 FORCE_SCAN="${FORCE_SCAN:-0}"
-AGENT_IMAGE="${FULLSEND_AGENT_IMAGE:-image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev}"
+AGENT_IMAGE="${FULLSEND_AGENT_IMAGE:-${RUNNER_IMAGE:-}}"
+[[ -n "$AGENT_IMAGE" ]] || { echo "FULLSEND_AGENT_IMAGE or RUNNER_IMAGE must be set" >&2; exit 1; }
 GW_URL="${OPENSHELL_GATEWAY_URL:?OPENSHELL_GATEWAY_URL must be set}"
 SCRIPT_CM="${FULLSEND_SCRIPTS_CONFIGMAP:-fullsend-runner-scripts}"
 PROJECTS_CM="${FULLSEND_PROJECTS_CONFIGMAP:-fullsend-projects}"
@@ -298,6 +299,8 @@ job_manifest() { # $1 json, $2 stage, $3 number, $4 url, $5 body
     --arg name "fullsend-$stage-$key" --arg num "$num" --arg url "$url" --arg body "$body" \
     --arg stage "$stage" --arg key "$key" --arg agent "$agent" --arg runtime "$runtime" \
     --arg model "$model" --arg mslug "$mslug" --arg locality "$locality" --arg img "$image" --arg gw "$GW_URL" --arg cm "$SCRIPT_CM" \
+    --arg kchost "${KEYCLOAK_HOST:-}" --arg kcrealm "${KEYCLOAK_REALM:-hypershell}" \
+    --arg oidcc "${OPENSHELL_OIDC_CLIENT_ID:-}" --arg oidci "${OPENSHELL_OIDC_ISSUER:-}" \
     --arg repo "$repo" --argjson deadline "$deadline" \
     '{
       apiVersion: "batch/v1",
@@ -341,6 +344,10 @@ job_manifest() { # $1 json, $2 stage, $3 number, $4 url, $5 body
                 { name: "FULLSEND_RUN_POST", value: "1" },
                 { name: "COMMENT_BODY", value: $body },
                 { name: "OPENSHELL_GATEWAY_URL", value: $gw },
+                { name: "KEYCLOAK_HOST", value: $kchost },
+                { name: "KEYCLOAK_REALM", value: $kcrealm },
+                { name: "OPENSHELL_OIDC_CLIENT_ID", value: $oidcc },
+                { name: "OPENSHELL_OIDC_ISSUER", value: $oidci },
                 { name: "KEYCLOAK_CLIENT_SECRET", valueFrom: { secretKeyRef: { name: "fullsend-runner-keycloak", key: "client-secret" } } }
               ] + (if $stage == "code"
                     then [{ name: "FULLSEND_INFERENCE_GATEWAY_API_KEY",

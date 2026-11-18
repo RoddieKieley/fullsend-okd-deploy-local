@@ -14,3 +14,8 @@ image/agents-okd/
 
 # Scratch output.
 /tmp/
+
+# Per-cluster values (identifiers, LAN hosts) — never commit.
+values.local.env
+*.local.env
+k8s/rendered/

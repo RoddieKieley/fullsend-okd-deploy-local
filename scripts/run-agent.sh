@@ -65,7 +65,8 @@ openshell_auth_init || { echo "gateway auth failed"; exit 10; }
 FORGE="${FULLSEND_FORGE:-github}"
 AGENT="${FULLSEND_AGENT:-triage}"
 RUNTIME="${FULLSEND_RUNTIME:-opencode}"
-MODEL="${FULLSEND_MODEL:-ollama/Qwen3.8-27B}"
+MODEL="${FULLSEND_MODEL:-${MODEL_TRIAGE:-}}"
+[[ -n "$MODEL" ]] || { echo "FULLSEND_MODEL or MODEL_TRIAGE must be set"; exit 11; }
 
 case "$FORGE" in
   github)

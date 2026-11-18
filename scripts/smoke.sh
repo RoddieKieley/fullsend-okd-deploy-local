@@ -3,6 +3,8 @@
 # Mirrors the flags `fullsend run` uses (--keep --no-auto-providers --no-tty
 # --policy --detach) so a green smoke means the fullsend path itself works.
 set -uo pipefail
+: "${MODEL_API_BASE:?MODEL_API_BASE must be set}"
+: "${SANDBOX_IMAGE:?SANDBOX_IMAGE must be set}"
 source /scripts/openshell-auth.sh
 openshell_auth_init
 
@@ -11,7 +13,7 @@ echo "== whoami =="; openshell whoami || exit 10
 NAME="smoke-$(head -c3 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 echo "== create $NAME =="
 openshell sandbox create --name "$NAME" --keep --no-auto-providers --no-tty \
-  --from ghcr.io/fullsend-ai/fullsend-sandbox@sha256:8e17e6120e17debdcabff5eb331a7cb7757b09ec3d586010c9d7956fd1fc5633 \
+  --from "$SANDBOX_IMAGE" \
   --policy /scripts/base-policy.yaml --detach -- sleep infinity
 echo "create rc=$?"
 
@@ -27,12 +29,12 @@ done
 openshell sandbox list
 
 echo "== exec =="
-openshell sandbox exec "$NAME" -- sh -c '
+openshell sandbox exec "$NAME" -- env MODEL_API_BASE="$MODEL_API_BASE" sh -c '
   id
   (command -v opencode && opencode --version) || echo "opencode MISSING"
   (command -v gh && gh --version | head -1) || echo "gh MISSING"
   (command -v python3 && python3 -c "import jsonschema; print(\"jsonschema ok\")") || echo "jsonschema MISSING"
-  curl -s -o /dev/null -w "ollama -> %{http_code}\n" --max-time 10 http://<model-host>:8080/v1/models || echo "ollama unreachable"
+  curl -s -o /dev/null -w "model endpoint -> %{http_code}\n" --max-time 10 "${MODEL_API_BASE%/}/models" || echo "model endpoint unreachable"
 '
 echo "exec rc=$?"
 
