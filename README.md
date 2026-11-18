@@ -265,6 +265,10 @@ $EDITOR values.local.env        # CLUSTER_DOMAIN, OPENSHELL_NAMESPACE, KEYCLOAK_
   into each Job from the rendered CronJob.
 - EnMaaS is optional: the model entries are emitted only when `ENMAAS_API_BASE`
   and both model ids are set, and its Secret reference is `optional: true`.
+- The harness `config.yaml` gateway URL is a literal (that field is not
+  environment-expanded at run time). `host/rebuild-runner.sh` rewrites it from
+  `LITELLM_ROUTE` while assembling the image context, so one harness fork builds
+  for any cluster.
 
 Still local for now: `k8s/projects-config.yaml` (repos, installation id, model
 choices), the one-off diagnostic manifests, and the harness `config.yaml` +
