@@ -271,7 +271,12 @@ $EDITOR values.local.env        # CLUSTER_DOMAIN, OPENSHELL_NAMESPACE, KEYCLOAK_
   writes `k8s/rendered/*.yaml` (git-ignored) and the deploy scripts apply those.
 - Host-side deployment lives in `host/`: `deploy-litellm.sh`,
   `build-runner-image.sh`, `push-runner-image.sh`, `rebuild-runner.sh`,
-  `litellm-route.sh`, `render-manifests.sh`.
+  `litellm-route.sh`, `render-manifests.sh`, `rotate-enmaas-key.sh`, plus the
+  promoted helpers `deploy-multiproject.sh`, `deploy-app-identity.sh`,
+  `deploy-dispatcher*.sh`, `run-job.sh`, `watch-job.sh`, `view-*`,
+  `gh-*`, `pi-code-*`, `forgejo-*` and the smoke/debug runners. All are
+  values-driven: no cluster hostnames, account ids, repo slugs or absolute
+  workspace paths are baked in.
 - In-cluster scripts (`scripts/openshell-auth.sh`, `smoke.sh`, `run-agent.sh`)
   take every cluster reference from the environment; the dispatcher passes them
   into each Job from the rendered CronJob.
