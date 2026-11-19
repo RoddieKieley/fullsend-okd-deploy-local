@@ -27,4 +27,4 @@ done
 echo "== logs =="
 oc -n fullsend logs job/smoke --tail=200 2>&1
 echo "== sandbox pods =="
-oc -n <openshell-namespace> get pods 2>&1 | tail -10
+oc -n "${OPENSHELL_NAMESPACE:?}" get pods 2>&1 | tail -10
