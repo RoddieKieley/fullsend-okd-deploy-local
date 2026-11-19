@@ -16,6 +16,7 @@ T="${SECRETS_DIR:-}"
 : "${SECRETS_DIR:?SECRETS_DIR must be set (values.local.env)}"
 T="$SECRETS_DIR"
 ORG="${WORKSPACE_ROOT:-$(dirname "$(dirname "$OKD_ROOT")")}"
+NS="$NAMESPACE"
 
 KEY=$T/fullsend-code.private-key.pem
 APP_ID=${GITHUB_APP_ID}

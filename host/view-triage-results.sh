@@ -8,6 +8,7 @@ T="${SECRETS_DIR:-}"
 : "${SECRETS_DIR:?SECRETS_DIR must be set (values.local.env)}"
 T="$SECRETS_DIR"
 ORG="${WORKSPACE_ROOT:-$(dirname "$(dirname "$OKD_ROOT")")}"
+NS="$NAMESPACE"
 
 bash "$HOST_DIR/render-manifests.sh" >/dev/null 2>&1 || true
 oc -n fullsend delete pod outview --ignore-not-found >/dev/null 2>&1

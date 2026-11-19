@@ -16,6 +16,7 @@ T="${SECRETS_DIR:-}"
 : "${SECRETS_DIR:?SECRETS_DIR must be set (values.local.env)}"
 T="$SECRETS_DIR"
 ORG="${WORKSPACE_ROOT:-$(dirname "$(dirname "$OKD_ROOT")")}"
+NS="$NAMESPACE"
 
 LOG=$T/deploy-multiproject.log
 : > "$LOG"; exec >> "$LOG" 2>&1
