@@ -151,7 +151,9 @@ JSON
   || bad "running_for_model returned $(running_for_model 'gateway/qwen38') (expected 2)"
 
 # Registry fixture must stay valid JSON and carry both keys.
-REG=$(sed -n '/projects.json: |/,/^---/p' "$D/k8s/projects-config.yaml" | sed '1d;/^---/d;s/^    //')
+REG_FILE=$D/k8s/projects-config.yaml
+[[ -f $REG_FILE ]] || REG_FILE=$D/k8s/projects-config.example.yaml
+REG=$(sed -n '/projects.json: |/,/^---/p' "$REG_FILE" | sed '1d;/^---/d;s/^    //')
 [[ $(jq -r 'length' <<<"$REG") -ge 1 ]] && ok "registry parses ($(jq -r 'length' <<<"$REG") projects)" || bad "registry invalid"
 for k in $(jq -r '.[].key' <<<"$REG"); do
   [[ $k =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]] || bad "key '$k' is not a valid label value"

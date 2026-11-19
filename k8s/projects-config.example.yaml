@@ -1,0 +1,56 @@
+# EXAMPLE project registry and dispatcher scan state.
+#
+# Copy to k8s/projects-config.yaml (git-ignored) and edit. Add one JSON object
+# per project; the dispatcher reads this ConfigMap every run. Every model must
+# also appear in models.json with a max_concurrent and a locality.
+#
+#
+# Adding a project = add an entry to projects.json and ensure the App is
+# installed on the repo. Keys are short ids (no '/') used in Job labels
+# (fullsend/repo=<key>), Job names and log lines.
+#
+# The dispatcher reads this ConfigMap each run (see dispatcher/dispatch.sh).
+# deadline_seconds is capped at 3300 in code: an installation token lives one
+# hour and is minted when the Job starts, so the push must happen inside it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fullsend-projects
+data:
+  # Per-model concurrency, keyed by the model id used in projects.json. Every
+  # model referenced by an enabled project must appear here; a scan fails
+  # otherwise. Counted across stages: a model shared by triage and code is one
+  # pool. Jobs are labelled fullsend/model=<slug> for the count.
+  models.json: |
+    {
+      "gateway/example-local":  { "max_concurrent": 2, "locality": "local" },
+      "ollama/example-local":   { "max_concurrent": 1, "locality": "local" },
+      "gateway/example-remote": { "max_concurrent": 1, "locality": "remote" }
+    }
+  projects.json: |
+    [
+      {
+        "key": "ex0",
+        "repo": "example-org/example-repo",
+        "installation_id": "REPLACE_WITH_INSTALLATION_ID",
+        "enabled": true,
+        "privacy": "local",
+        "poll_seconds": 120,
+        "deadline_seconds": 3300,
+        "max_code": 2,
+        "max_triage": 2,
+        "triage_max_age_days": 30,
+        "model_code": "gateway/example-local",
+        "model_triage": "ollama/example-local"
+      },
+    ]
+---
+# data.<key> = unix epoch of the last completed scan for that project.
+# The dispatcher patches only its own key; epoch 0 means "due immediately".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fullsend-dispatch-state
+data:
+  ex0: "0"
+  fs1: "0"

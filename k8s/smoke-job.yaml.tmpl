@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: smoke
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 spec:
   backoffLimit: 0
   activeDeadlineSeconds: 900
@@ -17,7 +17,7 @@ spec:
         - name: smoke
           # Internal registry reference; the stock runner image is the base,
           # with fullsend (this checkout) and openshell 0.1.6-rhaiv.4 injected.
-          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          image: ${RUNNER_IMAGE}
           imagePullPolicy: Always
           command: ["/bin/bash", "/scripts/smoke.sh"]
           env:

@@ -301,13 +301,13 @@ job_manifest() { # $1 json, $2 stage, $3 number, $4 url, $5 body
     --arg model "$model" --arg mslug "$mslug" --arg locality "$locality" --arg img "$image" --arg gw "$GW_URL" --arg cm "$SCRIPT_CM" \
     --arg kchost "${KEYCLOAK_HOST:-}" --arg kcrealm "${KEYCLOAK_REALM:-hypershell}" \
     --arg oidcc "${OPENSHELL_OIDC_CLIENT_ID:-}" --arg oidci "${OPENSHELL_OIDC_ISSUER:-}" \
-    --arg repo "$repo" --argjson deadline "$deadline" \
+    --arg repo "$repo" --arg ns "$NS" --argjson deadline "$deadline" \
     '{
       apiVersion: "batch/v1",
       kind: "Job",
       metadata: {
         generateName: ($name + "-"),
-        namespace: "fullsend",
+        namespace: $ns,
         labels: { app: "fullsend-agent", "fullsend/stage": $stage,
                   "fullsend/issue": $num, "fullsend/repo": $key,
                   "fullsend/model": $mslug, "fullsend/locality": $locality }

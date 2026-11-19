@@ -19,3 +19,4 @@ image/agents-okd/
 values.local.env
 *.local.env
 k8s/rendered/
+k8s/projects-config.yaml

@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: outview
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 spec:
   backoffLimit: 0
   activeDeadlineSeconds: 300
@@ -12,7 +12,7 @@ spec:
       serviceAccountName: fullsend-runner
       containers:
         - name: c
-          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          image: ${RUNNER_IMAGE}
           imagePullPolicy: Always
           command: ["/bin/bash","-c"]
           args:

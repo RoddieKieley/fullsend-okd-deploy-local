@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: fullsend-triage
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 spec:
   backoffLimit: 0
   activeDeadlineSeconds: 4500
@@ -15,7 +15,7 @@ spec:
       serviceAccountName: fullsend-runner
       containers:
         - name: agent
-          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          image: ${RUNNER_IMAGE}
           imagePullPolicy: Always
           command: ["/bin/bash", "/scripts/run-agent.sh"]
           env:
@@ -27,7 +27,7 @@ spec:
             # Talk to the gateway Service directly, not the public route:
             # the route fronts Envoy, which resets long-idle gRPC streams.
             - name: OPENSHELL_GATEWAY_URL
-              value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+              value: "${OPENSHELL_GATEWAY_URL}"
             # --- forge selection ---
             - name: FULLSEND_FORGE
               value: "github"
@@ -37,9 +37,9 @@ spec:
                   name: fullsend-github
                   key: token
             - name: FULLSEND_ISSUE_URL
-              value: "https://github.com/roddiekieley/fs-scratch-0/issues/1"
+              value: "https://github.com/${PROBE_REPO}/issues/${PROBE_ISSUE}"
             - name: FULLSEND_REPO_SLUG
-              value: "roddiekieley/fs-scratch-0"
+              value: "${PROBE_REPO}"
             - name: FULLSEND_AGENT
               value: "code"
             - name: FULLSEND_RUNTIME

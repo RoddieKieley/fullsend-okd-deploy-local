@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: profdebug
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 spec:
   backoffLimit: 0
   activeDeadlineSeconds: 600
@@ -15,7 +15,7 @@ spec:
       serviceAccountName: fullsend-runner
       containers:
         - name: c
-          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          image: ${RUNNER_IMAGE}
           imagePullPolicy: Always
           command: ["/bin/bash", "/scripts/debug-profile.sh"]
           env:
@@ -25,7 +25,7 @@ spec:
                   name: fullsend-runner-keycloak
                   key: client-secret
             - name: OPENSHELL_GATEWAY_URL
-              value: "https://openshell-gateway.<openshell-namespace>.svc.cluster.local:8080"
+              value: "${OPENSHELL_GATEWAY_URL}"
             - name: OPENSHELL_GATEWAY_INSECURE
               value: "true"
           resources:

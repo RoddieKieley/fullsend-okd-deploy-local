@@ -173,6 +173,18 @@ still resolves, so `models` only matters for non-default API types
 Caps live in `models.json`; `validate_registry` fails the scan if a project names a
 model with no cap, or with no `locality`.
 
+Rotating the EnMaaS key:
+
+```sh
+host/rotate-enmaas-key.sh /secure/enmaas.key    # or: ENMAAS_API_KEY=... host/rotate-enmaas-key.sh
+```
+
+A Secret update alone is not enough: LiteLLM reads `ENMAAS_API_KEY` at container
+start. The script updates `Secret/enmaas-api-key`, rolls the Deployment, and
+verifies the running pod carries the new key (hash comparison, never printing
+it), then runs the probe.
+
+
 ### Privacy: local-only projects
 
 Every model declares a locality and every project may declare a privacy

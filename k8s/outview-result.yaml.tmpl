@@ -2,13 +2,13 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: outview
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 spec:
   restartPolicy: Never
   serviceAccountName: fullsend-runner
   containers:
     - name: c
-      image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+      image: ${RUNNER_IMAGE}
       command: ["/bin/bash","-c"]
       args:
         - |

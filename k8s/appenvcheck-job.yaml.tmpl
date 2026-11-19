@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: appenvcheck
-  namespace: fullsend
+  namespace: ${NAMESPACE}
 spec:
   backoffLimit: 0
   activeDeadlineSeconds: 300
@@ -13,7 +13,7 @@ spec:
       serviceAccountName: fullsend-runner
       containers:
         - name: check
-          image: image-registry.openshift-image-registry.svc:5000/fullsend/fullsend-runner-okd:dev
+          image: ${RUNNER_IMAGE}
           imagePullPolicy: Always
           command: ["/bin/bash", "-c"]
           args:
@@ -32,12 +32,12 @@ spec:
             - name: GITHUB_APP_ID
               valueFrom:
                 secretKeyRef:
-                  name: fullsend-github-app
+                  name: ${GITHUB_APP_SECRET_NAME}
                   key: app-id
             - name: GITHUB_APP_INSTALLATION_ID
               valueFrom:
                 secretKeyRef:
-                  name: fullsend-github-app
+                  name: ${GITHUB_APP_SECRET_NAME}
                   key: installation-id
           volumeMounts:
             - name: scripts
