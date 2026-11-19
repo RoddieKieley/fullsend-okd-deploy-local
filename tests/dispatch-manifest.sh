@@ -17,7 +17,7 @@ export KEYCLOAK_HOST="kc.example.invalid"
 export KEYCLOAK_REALM="testrealm"
 export OPENSHELL_OIDC_CLIENT_ID="test-client"
 export OPENSHELL_OIDC_ISSUER="https://kc.example.invalid/realms/testrealm"
-export GITHUB_APP_INSTALLATION_ID="REPLACE_WITH_INSTALLATION_ID"
+export GITHUB_APP_INSTALLATION_ID="12345678"
 export DISPATCH_LIB_ONLY=1
 # shellcheck disable=SC1091
 . "$D/dispatcher/dispatch.sh" scan >/dev/null 2>&1
@@ -25,12 +25,12 @@ export DISPATCH_LIB_ONLY=1
 # Model/locality fixture: job_manifest resolves locality from models.json.
 printf '%s' '{"gateway/other":{"max_concurrent":2,"locality":"remote"},"ollama/other":{"max_concurrent":1,"locality":"local"}}' >"$TMP/models.json"
 
-pj='{"key":"fs1","repo":"RoddieKieley/fs-scratch-1","installation_id":"REPLACE_WITH_INSTALLATION_ID",
+pj='{"key":"fs1","repo":"example-org/example-repo","installation_id":"12345678",
       "poll_seconds":300,"deadline_seconds":9999,"max_code":1,
       "model_code":"gateway/other","model_triage":"ollama/other"}'
 
-CODE=$(job_manifest "$pj" code 11 "https://github.com/RoddieKieley/fs-scratch-1/issues/11" "")
-TRI=$(job_manifest "$pj" triage 11 "https://github.com/RoddieKieley/fs-scratch-1/issues/11" "")
+CODE=$(job_manifest "$pj" code 11 "https://github.com/example-org/example-repo/issues/11" "")
+TRI=$(job_manifest "$pj" triage 11 "https://github.com/example-org/example-repo/issues/11" "")
 
 j() { jq -r "$1" <<<"$2"; }
 

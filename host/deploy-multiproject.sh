@@ -41,7 +41,12 @@ oc -n "$NS" patch configmap fullsend-dispatcher --type=json \
 oc -n "$NS" get cm fullsend-dispatcher -o json | jq -r '.data|keys|"  keys: " + join(",")'
 
 echo "===== 2. registry + state ====="
-oc -n "$NS" apply -f "$D/k8s/projects-config.yaml"
+# The registry carries ${GITHUB_APP_INSTALLATION_ID}; render it from values so
+# the installation id lives only in values.local.env.
+pc="$T/projects-config.rendered.$$"
+envsubst '${GITHUB_APP_INSTALLATION_ID}' <"$D/k8s/projects-config.yaml" >"$pc"
+oc -n "$NS" apply -f "$pc"
+rm -f "$pc"
 oc -n "$NS" get cm fullsend-dispatch-state -o jsonpath='{.data}'; echo
 
 echo "===== 3. cronjobs ====="

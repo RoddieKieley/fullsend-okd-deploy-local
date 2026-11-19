@@ -54,7 +54,7 @@ Job (ns fullsend)  image fullsend-runner-okd:dev
 ## GitHub App identity
 
 The dispatcher and every agent Job authenticate as the `fullsend-code` GitHub
-App (App id `REPLACE_WITH_APP_ID`, installation `REPLACE_WITH_INSTALLATION_ID`), not as a PAT. Commits, PRs,
+App (App id `$GH_APP_ID`, installation `$GH_INSTALLATION_ID`), not as a PAT. Commits, PRs,
 comments and labels are therefore attributed to `fullsend-code[bot]`, which keeps
 agent work separable from human work on GitHub.
 
@@ -80,8 +80,8 @@ agent work separable from human work on GitHub.
 Verify the App path end to end:
 
 ```sh
-bash .opencode/scripts/app-discover.sh REPLACE_WITH_APP_ID .opencode/tmp/fullsend-code.private-key.pem
-bash .opencode/scripts/verify-github-app.sh REPLACE_WITH_APP_ID REPLACE_WITH_INSTALLATION_ID \
+bash .opencode/scripts/app-discover.sh $GH_APP_ID .opencode/tmp/fullsend-code.private-key.pem
+bash .opencode/scripts/verify-github-app.sh $GH_APP_ID $GH_INSTALLATION_ID \
   .opencode/tmp/fullsend-code.private-key.pem RoddieKieley/fs-scratch-0
 ```
 
@@ -92,7 +92,7 @@ dispatcher loops them. Adding a project does not touch code:
 
 ```json
 { "key": "fs1", "repo": "RoddieKieley/fs-scratch-1",
-  "installation_id": "REPLACE_WITH_INSTALLATION_ID", "enabled": true,
+  "installation_id": "<your-installation-id>", "enabled": true,
   "poll_seconds": 300, "deadline_seconds": 3300,
   "max_code": 1, "max_triage": 1, "triage_max_age_days": 14,
   "model_code": "gateway/qwen38", "model_triage": "ollama/Qwen3.8-27B" }
@@ -126,7 +126,7 @@ Adding project #2:
 bash .opencode/scripts/ensure-labels.sh RoddieKieley/fs-scratch-1
 # add the entry to k8s/projects-config.yaml, then:
 bash .opencode/scripts/deploy-multiproject.sh
-bash .opencode/scripts/verify-github-app.sh REPLACE_WITH_APP_ID REPLACE_WITH_INSTALLATION_ID \
+bash .opencode/scripts/verify-github-app.sh $GH_APP_ID $GH_INSTALLATION_ID \
   .opencode/tmp/fullsend-code.private-key.pem RoddieKieley/fs-scratch-1
 ```
 
@@ -501,7 +501,7 @@ Apply the Job (replace OWNER/REPO and the issue number first):
 
 ```sh
 oc -n fullsend create secret generic fullsend-github-app \
-  --from-literal=app-id=REPLACE_WITH_APP_ID --from-literal=installation-id=REPLACE_WITH_INSTALLATION_ID \
+  --from-literal=app-id=$GH_APP_ID --from-literal=installation-id=$GH_INSTALLATION_ID \
   --from-file=private-key=<app>.private-key.pem \
   --dry-run=client -o yaml | oc apply -f -
 oc -n fullsend apply -f k8s/job-triage.yaml
